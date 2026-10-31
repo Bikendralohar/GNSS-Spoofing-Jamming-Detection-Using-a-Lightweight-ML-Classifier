@@ -1,0 +1,65 @@
+{
+  "training_data": {
+    "rows": 7383,
+    "satellites": 28,
+    "epochs": 1379,
+    "valid_epochs": 825,
+    "cadence_s": 300.0
+  },
+  "baseline_vs_learned": {
+    "Threshold rule": {
+      "Precision": 0.834774255523535,
+      "Recall": 0.4440470107307103,
+      "F1": 0.5797198132088058,
+      "Accuracy": 0.7454545454545455
+    },
+    "Gradient Boosting": {
+      "Precision": 0.9519427402862985,
+      "Recall": 0.9514563106796117,
+      "F1": 0.9516994633273703,
+      "Accuracy": 0.9618181818181818
+    }
+  },
+  "lodo_real_epochs_flagged": {
+    "Clean": 807,
+    "Spoofed": 16,
+    "Jammed": 2
+  },
+  "isolation_forest_flagged": [
+    42,
+    825
+  ],
+  "synthetic_test_set": {
+    "rows": 20076,
+    "epochs": 1854,
+    "valid_epochs": 1854,
+    "label_epochs": {
+      "0": 1194,
+      "1": 400,
+      "2": 260
+    },
+    "accuracy": 0.9579288025889967,
+    "macro_precision": 0.9297870506174014,
+    "macro_recall": 0.9197435897435898,
+    "macro_f1": 0.9246625602160545,
+    "attack_detection_recall": 0.9757575757575757,
+    "false_alarms_on_clean": 0,
+    "confusion_rows_true_cols_pred": [
+      [
+        1194,
+        0,
+        0
+      ],
+      [
+        16,
+        356,
+        28
+      ],
+      [
+        0,
+        34,
+        226
+      ]
+    ]
+  }
+}

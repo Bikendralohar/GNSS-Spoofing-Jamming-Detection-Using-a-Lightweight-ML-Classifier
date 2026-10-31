@@ -672,13 +672,14 @@ def severity_table(sim_test: pd.DataFrame) -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
-def baseline_threshold_metrics(sim_test: pd.DataFrame, threshold_m: float) -> dict:
+def baseline_threshold_metrics(sim_test: pd.DataFrame, threshold_m: float,
+                               model_name: str = "Learned model") -> dict:
     """The original rule (distance > T) scored on the same simulated test epochs (attack vs clean)."""
     y = (sim_test["Label"] > 0).astype(int)
     rule = (sim_test["Distance_from_true_m"] > threshold_m).astype(int)
     ml = (sim_test["Pred"] > 0).astype(int)
     out = {}
-    for name, pred in (("Threshold rule", rule), ("Random Forest", ml)):
+    for name, pred in (("Threshold rule", rule), (model_name, ml)):
         pr, rc, f1, _ = precision_recall_fscore_support(y, pred, average="binary", zero_division=0)
         out[name] = {"Precision": pr, "Recall": rc, "F1": f1, "Accuracy": accuracy_score(y, pred)}
     return out
@@ -847,6 +848,7 @@ def build_model_card(result: object, scene: Scene, settings: dict,
             "n_train_epochs": len(result.X_train),
             "n_test_epochs": len(result.X_test),
             "split": {"train_size": result.train_size, "test_size": result.test_size, "seed": result.seed},
+            "label_mode": settings.get("label_mode", "threshold"),
             "settings": dict(settings),
             "metrics_80_20_test": {**result.metrics, "recall_by_class": recall},
             "raw_summary": result.raw_summary,
@@ -865,6 +867,8 @@ def build_model_card(result: object, scene: Scene, settings: dict,
             "trained_at": datetime.now().isoformat(timespec="seconds"),
             "training_file": training_file,
             "n_train_epochs": int(scene.epoch["Valid_fix"].sum()),
+            "label_mode": "simulated",
+            "protocol": "final fit on all days; metrics = leave-one-day-out on simulated attacks",
             "settings": dict(settings),
             "cv_metrics_simulated": {**{k: float(v) for k, v in result.metrics.items()}, "recall": recall},
             "ref_flag_rate": float(result.real_pred["Pred"].isin([1, 2]).mean()) if hasattr(result, "real_pred") else 0.0,

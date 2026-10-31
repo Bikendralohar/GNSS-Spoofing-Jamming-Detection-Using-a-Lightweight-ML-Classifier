@@ -114,7 +114,7 @@ model_choice = st.sidebar.selectbox(
 label_mode_choice = st.sidebar.radio(
     "Ground Truth Labeling",
     ["Physical Threshold (Clear vs Spoofed)", "Simulated Attacks (Clean vs Spoofed vs Jammed)"],
-    index=0,
+    index=1,
     help="Physical Threshold uses GNSS distance & coordinate physics. Simulated Attacks injects synthetic attacks."
 )
 label_mode_internal = "threshold" if label_mode_choice.startswith("Physical") else "simulated"
@@ -172,7 +172,7 @@ col_m5.metric("Weighted F1-Score", f"{res.metrics['f1']:.3f}")
 tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
     "🤖 Model Performance",
     "🛰️ Spoofed vs Clear Analysis",
-    "🧪 Real-time Dataset Predictor",
+    "🧪 Synthetic 1 Hz Test Set Predictor",
     "📊 Dataset Overview",
     "📍 Position & 3D Deviation",
     "🏷️ Ground Truth & Anomaly Explorer"
@@ -341,12 +341,12 @@ with tab2:
         )
 
 # --------------------------------------------------------------------------- #
-# TAB 3: Real-time Dataset Predictor
+# TAB 3: Synthetic 1 Hz test set predictor
 # --------------------------------------------------------------------------- #
 with tab3:
-    st.subheader("🧪 Real-Time / Live Generated Dataset Predictor")
+    st.subheader("🧪 Synthetic 1 Hz Test Set / Recording Predictor")
     st.write(
-        "Upload your **real-time generated dataset** or any GNSS recording to immediately find out "
+        "Upload the **synthetic 1 Hz test set** or any GNSS recording to immediately find out "
         "how much of it is **Spoofed** and how much is **Clear** using the trained machine learning model."
     )
 
@@ -379,12 +379,12 @@ with tab3:
                 st.error(f"Could not load model: {e}")
 
     uploaded_file = st.file_uploader(
-        "Upload Real-Time Generated GNSS Dataset (CSV)",
+        "Upload Synthetic 1 Hz Test Set or GNSS Recording (CSV)",
         type=["csv"], key="realtime_file_uploader"
     )
 
     if uploaded_file is None:
-        st.info("👆 Upload your CSV file (e.g. real-time sensor log or simulated recording) to inspect.")
+        st.info("👆 Upload your CSV file (e.g. the synthetic 1 Hz test set or a recording) to inspect.")
     else:
         try:
             rt_raw = pd.read_csv(uploaded_file)
@@ -412,7 +412,7 @@ with tab3:
             st.stop()
 
         rt_valid_n = max(rt_summary["valid"], 1)
-        st.markdown(f"### Real-Time Inference Results ({rt_summary['epochs']:,} epochs evaluated)")
+        st.markdown(f"### Inference Results ({rt_summary['epochs']:,} epochs evaluated)")
 
         rt_c1, rt_c2, rt_c3, rt_c4 = st.columns(4)
         rt_c1.metric("🟢 Clear / Genuine", f"{rt_summary['Clear']:,}", f"{rt_summary['Clear_pct']:.1f}%")
@@ -425,7 +425,7 @@ with tab3:
 
         col_rt_d, col_rt_t = st.columns([1, 2])
         with col_rt_d:
-            st.markdown("#### Real-Time Status Breakdown")
+            st.markdown("#### Status Breakdown")
             rt_donut_labels = ["Clear", "Spoofed"]
             rt_donut_values = [rt_summary["Clear"], rt_summary["Spoofed"]]
             rt_donut_colors = [STATUS_COLORS["Clear"], STATUS_COLORS["Spoofed"]]
@@ -446,14 +446,14 @@ with tab3:
             st.plotly_chart(fig_rt_pie, width='stretch')
 
         with col_rt_t:
-            st.markdown("#### Real-Time Attack Probability Timeline")
+            st.markdown("#### Attack Probability Timeline")
             rt_tl = rt_ep[rt_ep["Valid_fix"]]
             if len(rt_tl):
                 fig_rt_tl = px.scatter(
                     rt_tl, x="Timestamp", y="P_attack", color="ML_status",
                     color_discrete_map=STATUS_COLORS,
                     hover_data=["Satellite_count", "PDOP", "Distance_from_true_m"],
-                    title="Real-Time Epoch Attack Probability"
+                    title="Epoch Attack Probability"
                 )
                 fig_rt_tl.add_hline(y=0.5, line_dash="dash", line_color="red", annotation_text="0.5")
                 st.plotly_chart(fig_rt_tl, width='stretch')
@@ -461,7 +461,7 @@ with tab3:
         # Flagged epochs
         rt_flagged = rt_ep[rt_ep["ML_status"].isin(["Spoofed", "Jammed"])].sort_values("P_attack", ascending=False)
         if rt_flagged.empty:
-            st.success("No epoch in this real-time dataset was detected as spoofed or jammed! All data appears Clear.")
+            st.success("No epoch in this dataset was detected as spoofed or jammed! All data appears Clear.")
         else:
             st.warning(f"⚠️ Detected **{len(rt_flagged)} spoofed/jammed epochs**:")
             rt_disp = rt_flagged[["Timestamp", "ML_status", "P_attack", "Distance_from_true_m",
@@ -494,15 +494,15 @@ with tab3:
         dl1, dl2 = st.columns(2)
         with dl1:
             st.download_button(
-                "📥 Download Scored Real-Time Epochs (CSV)",
+                "📥 Download Scored Epochs (CSV)",
                 data=rt_ep.to_csv(index=False).encode("utf-8"),
-                file_name="realtime_epoch_results.csv", mime="text/csv"
+                file_name="scored_epochs.csv", mime="text/csv"
             )
         with dl2:
             st.download_button(
                 "📥 Download Original Rows + ML Status (CSV)",
                 data=M.attach_status(rt_raw, rt_ep).to_csv(index=False).encode("utf-8"),
-                file_name="realtime_with_status.csv", mime="text/csv"
+                file_name="rows_with_status.csv", mime="text/csv"
             )
 
 # --------------------------------------------------------------------------- #

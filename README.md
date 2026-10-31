@@ -1,58 +1,38 @@
 # GNSS Spoofing & Jamming Detection System
 
-## Overview
-This project detects GNSS spoofing and jamming anomalies using **Machine Learning (Scikit-Learn)**. 
+Detects GNSS spoofing and jamming per epoch from receiver measurements, using scikit-learn
+classifiers trained on attacks injected into real epochs (labels: Clean / Spoofed / Jammed).
 
-### Evaluator Specification Compliant:
-1. **Model Training via Scikit-Learn (`sklearn`)**:
-   - Random Forest (`RandomForestClassifier`)
-   - Gradient Boosting (`HistGradientBoostingClassifier`)
-   - Decision Tree (`DecisionTreeClassifier`)
-   - Logistic Regression (`LogisticRegression`)
-   - Support Vector Machine (`SVC`)
-2. **80% Training / 20% Testing Random Partition**:
-   - Splitting is performed randomly every time using `sklearn.model_selection.train_test_split(..., test_size=0.20, random_state=seed)`.
-   - Dedicated "🎲 Random Split & Retrain" button to dynamically randomize the 80/20 split and re-evaluate on the fly.
-3. **Raw Dataset Analysis**:
-   - Clearly computes and displays exact counts and percentages of **Clear** vs **Spoofed** epochs in `raw_dataset.csv`.
-4. **Real-Time Dataset Predictor**:
-   - Upload any real-time generated or recorded GNSS CSV to classify each epoch as **Clear** or **Spoofed**, with probability plots and downloadable results.
+## Data
+| File | What it is |
+|------|------------|
+| `raw_dataset.csv` | **Training data**: 7,383 satellite rows, 28 GPS satellites, 1,379 epochs at 300 s, 6-10 Jan 2025, stationary receiver. *Source station / website: add here.* `P_correction` = pseudorange in metres as supplied with the recording; the residual is `P_correction - range_to_reference + c * satellite_clock`. |
+| `synthetic_1hz_test_set.csv` | **Synthetic 1 Hz test set** (was `realtime_satellite_data_with_attacks.csv`): 20,076 rows, 1,854 epochs, 14 Oct 2026, with a `true_label` column (0 clean, 1 spoofed, 2 jammed). Used only for testing, never for training. |
 
----
-
-## How to Run
-
-1. Make sure Python 3.9+ is installed.
-2. Install dependencies:
+## Reproduce the paper
 ```bash
 pip install -r requirements.txt
-```
-3. Start the dashboard:
-```bash
+python reproduce_paper.py      # all tables -> results/, all five models -> models/
 python -m streamlit run dashboard.py
 ```
+`reproduce_paper.py` runs: 10-seed 80/20 evaluation (macro metrics, mean +- std), leave-one-day-out
+validation (the more reliable result), the 500 m threshold baseline, the Isolation Forest, and scoring of the
+synthetic 1 Hz test set. Every model in `models/` is a 3-class simulated-attack model refit on all five days;
+each model card records `label_mode`, seed, metrics and library versions.
 
----
-
-## Project Structure
-
+## Project structure
 | File | Purpose |
 |------|---------|
-| `dashboard.py` | Interactive Streamlit Dashboard with 80/20 evaluation, raw dataset analysis, and real-time predictor |
-| `ml_model.py`  | GNSS feature engineering, 80/20 train-test pipeline, sklearn models, dataset scoring |
-| `raw_dataset.csv` | Baseline GNSS observation dataset (7,383 rows, 1,379 epochs) |
-| `models/` | Saved trained models (`.joblib`) for reuse and deployment |
-| `requirements.txt` | Python library requirements |
+| `ml_model.py` | Feature engineering, attack simulator, 80/20 and leave-one-day-out pipelines, scoring |
+| `reproduce_paper.py` | One command that regenerates every number in the paper and the saved models |
+| `dashboard.py` | Streamlit dashboard (default labelling: simulated attacks) |
+| `models/` | Five saved models (`.joblib`), one per classifier |
+| `results/` | CSV/JSON outputs written by `reproduce_paper.py` |
 
----
+## Features per epoch
+Satellite_count, PDOP, Distance_from_true_m, Vertical_dev_m, Movement_since_previous_m,
+Clock_bias_change_s, Res_median_m, Res_std_m, Res_max_dev_m.
 
-## Features Extracted per Epoch
-- **Satellite_count**: Contributing visible satellites in the epoch fix
-- **PDOP**: Position Dilution of Precision (satellite geometry quality)
-- **Distance_from_true_m**: 3D spatial displacement from estimated resting position
-- **Vertical_dev_m**: Altitude / vertical axis deviation
-- **Movement_since_previous_m**: Step displacement from consecutive epoch
-- **Clock_bias_change_s**: Receiver clock bias jump
-- **Res_median_m**: Median pseudorange residual
-- **Res_std_m**: Pseudorange residual dispersion
-- **Res_max_dev_m**: Peak single-satellite residual error
+## Note on the "Physical Threshold" labelling mode
+Its label is computed from `Distance_from_true_m`, which is also an input feature, so tree models reach 100%
+trivially. Use it only as a baseline, not as evidence of detection skill.
